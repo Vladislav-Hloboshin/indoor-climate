@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <title>App Engine Demo</title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  </head>
+  <body>
+    <label>Дата: </label><label id="date"></label><br>
+    <label>CO2: </label><label id="co2"></label><br>
+    <label>Температура: </label><label id="temp"></label><br>
+    <script>
+        function getUrlParameter(sParam)
+        {
+            var sPageURL = window.location.search.substring(1);
+            var sURLVariables = sPageURL.split('&');
+            for (var i = 0; i < sURLVariables.length; i++)
+            {
+                var sParameterName = sURLVariables[i].split('=');
+                if (sParameterName[0] == sParam)
+                {
+                    return sParameterName[1];
+                }
+            }
+        }
+        function updateActualData(){
+            $.getJSON('/data', {code: getUrlParameter('code')}, function(data) {
+                $('#date').html(data.date);
+                $('#co2').html(data.co2+'ppm');
+                $('#temp').html(data.temp + 'C');
+            });
+        }
+
+        $(document).ready(function() {
+            updateActualData();
+            setInterval(updateActualData, 5000);
+        });
+    </script>
+  </body>
+</html>
