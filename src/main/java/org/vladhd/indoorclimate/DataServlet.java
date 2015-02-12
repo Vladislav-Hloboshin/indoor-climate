@@ -66,12 +66,13 @@ public class DataServlet extends HttpServlet {
         ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
         if(actualData==null){
             actualData = new ActualData(code, date, co2, temp);
+            ofy().save().entity(actualData).now();
         } else if(actualData.date.isBefore(date)) {
             actualData.date = date;
             actualData.co2 = co2;
             actualData.temp = temp;
+            ofy().save().entity(actualData).now();
         }
-        ofy().save().entity(actualData).now();
 
         resp.setContentType("text/plain");
         resp.getWriter().println("ok");
