@@ -39,7 +39,8 @@ public class DataServlet extends HttpServlet {
         }
         switch(method){
             case "actual":
-                ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
+                ActualData actualData = ofy().cache(false).load().type(ActualData.class).id(code).now();
+                actualData.now = DateTime.now();
                 resp.getWriter().println(gson.toJson(actualData));
                 break;
             case "history":
@@ -61,17 +62,17 @@ public class DataServlet extends HttpServlet {
 
         HistoryData historyData = new HistoryData(code, date, co2, temp);
 
-        ofy().save().entity(historyData).now();
+        ofy().save().entity(historyData);
 
         ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
         if(actualData==null){
             actualData = new ActualData(code, date, co2, temp);
-            ofy().save().entity(actualData).now();
+            ofy().save().entity(actualData);
         } else if(actualData.date.isBefore(date)) {
             actualData.date = date;
             actualData.co2 = co2;
             actualData.temp = temp;
-            ofy().save().entity(actualData).now();
+            ofy().save().entity(actualData);
         }
 
         resp.setContentType("text/plain");

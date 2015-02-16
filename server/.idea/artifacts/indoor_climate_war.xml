@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="indoor-climate:war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <root id="archive" name="indoor-climate-1.0.war">
+      <element id="artifact" artifact-name="indoor-climate:war exploded" />
+    </root>
+  </artifact>
+</component>
