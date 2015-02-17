@@ -1,16 +1,19 @@
 {
     "content_scripts": [], 
     "description": "Extension description", 
-    "creator": "Kango", 
+    "creator": "Vlad", 
     "background_scripts": [
         "main.js"
     ], 
     "homepage_url": "http://kangoextensions.com/", 
-    "version": "0.9.1", 
+    "version": "0.9.2", 
     "browser_button": {
-        "caption": "Kango", 
+        "caption": "CO2 Checker", 
         "icon": "icons/button.png", 
-        "tooltipText": "Kango"
+        "tooltipText": "CO2 Checker"
     }, 
-    "name": "IndoorClimate CO2 Checker"
+    "name": "IndoorClimate CO2 Checker",
+	"permissions": {
+        "notifications": true
+    }
 }
