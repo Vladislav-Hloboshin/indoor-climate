@@ -8,7 +8,7 @@
 }
 
 CO2Checker.prototype = {
-	_refreshTimeout: 5000,
+	_refreshTimeout: 60000,
 	_code: '954e31d7-6746-440e-b4ad-47ef8d5443c0',
 	_siteUrl: 'http://indoor-climate.appspot.com',
 
@@ -28,7 +28,7 @@ CO2Checker.prototype = {
 		kango.xhr.send(details, function(data) {
 			if(data.status == 200) {
 				var co2 = data.response.co2;
-				kango.ui.browserButton.setBadgeValue(co2);
+				kango.ui.browserButton.setBadgeValue(co2 < 900 ? null : co2);
 			}
 		});
 	}

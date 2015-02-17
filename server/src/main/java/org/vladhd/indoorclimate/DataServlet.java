@@ -3,6 +3,7 @@ package org.vladhd.indoorclimate;
 import com.fatboyindustrial.gsonjodatime.Converters;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.googlecode.objectify.VoidWork;
 import com.googlecode.objectify.impl.translate.opt.joda.JodaTimeTranslators;
 import org.vladhd.indoorclimate.domain.ActualData;
 import org.vladhd.indoorclimate.domain.HistoryData;
@@ -39,8 +40,7 @@ public class DataServlet extends HttpServlet {
         }
         switch(method){
             case "actual":
-                ActualData actualData = ofy().cache(false).load().type(ActualData.class).id(code).now();
-                actualData.now = DateTime.now();
+                ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
                 resp.getWriter().println(gson.toJson(actualData));
                 break;
             case "history":
@@ -55,25 +55,30 @@ public class DataServlet extends HttpServlet {
     public void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException{
 
-        String code = req.getParameter("code");
-        DateTime date = DateTime.parse(req.getParameter("date"));
-        int co2 = Integer.parseInt(req.getParameter("co2"));
-        double temp = Double.parseDouble(req.getParameter("temp"));
+        final String code = req.getParameter("code");
+        final DateTime date = DateTime.parse(req.getParameter("date"));
+        final int co2 = Integer.parseInt(req.getParameter("co2"));
+        final double temp = Double.parseDouble(req.getParameter("temp"));
 
-        HistoryData historyData = new HistoryData(code, date, co2, temp);
+        ofy().transact(new VoidWork() {
+            @Override
+            public void vrun() {
+                HistoryData historyData = new HistoryData(code, date, co2, temp);
 
-        ofy().save().entity(historyData);
+                ofy().save().entity(historyData);
 
-        ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
-        if(actualData==null){
-            actualData = new ActualData(code, date, co2, temp);
-            ofy().save().entity(actualData);
-        } else if(actualData.date.isBefore(date)) {
-            actualData.date = date;
-            actualData.co2 = co2;
-            actualData.temp = temp;
-            ofy().save().entity(actualData);
-        }
+                ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
+                if(actualData==null){
+                    actualData = new ActualData(code, date, co2, temp);
+                    ofy().save().entity(actualData);
+                } else if(actualData.date.isBefore(date)) {
+                    actualData.date = date;
+                    actualData.co2 = co2;
+                    actualData.temp = temp;
+                    ofy().save().entity(actualData);
+                }
+            }
+        });
 
         resp.setContentType("text/plain");
         resp.getWriter().println("ok");
