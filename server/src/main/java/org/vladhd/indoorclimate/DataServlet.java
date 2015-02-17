@@ -1,13 +1,15 @@
 package org.vladhd.indoorclimate;
 
 import com.fatboyindustrial.gsonjodatime.Converters;
+import com.google.appengine.api.memcache.MemcacheService;
+import com.google.appengine.api.memcache.MemcacheServiceFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.googlecode.objectify.VoidWork;
 import com.googlecode.objectify.impl.translate.opt.joda.JodaTimeTranslators;
+import org.joda.time.DateTime;
 import org.vladhd.indoorclimate.domain.ActualData;
 import org.vladhd.indoorclimate.domain.HistoryData;
-import org.joda.time.DateTime;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -28,27 +30,47 @@ public class DataServlet extends HttpServlet {
     }
 
     @Override
-    public void doGet(HttpServletRequest req, HttpServletResponse resp)
+    public void doGet(HttpServletRequest req, final HttpServletResponse resp)
             throws IOException {
         resp.setContentType("text/plain");
-        Gson gson = Converters.registerDateTime(new GsonBuilder()).create();
+        final Gson gson = Converters.registerDateTime(new GsonBuilder()).create();
 
-        String code = req.getParameter("code");
+        final String code = req.getParameter("code");
         String method = req.getParameter("method");
         if(method==null || method.length()==0){
             method = "actual";
         }
-        switch(method){
+        final String finalMethod = method;
+
+        switch(finalMethod){
             case "actual":
-                ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
+                MemcacheService syncCache = MemcacheServiceFactory.getMemcacheService();
+                ActualData actualData = (ActualData) syncCache.get("ActualData_" + code);
                 resp.getWriter().println(gson.toJson(actualData));
+                /*ofy().transact(new VoidWork() {
+                    @Override
+                    public void vrun() {
+                        ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
+                        try {
+                            resp.getWriter().println(gson.toJson(actualData));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }});*/
                 break;
             case "history":
-                List<HistoryData> historyDataList = ofy().load().type(HistoryData.class).filter("code", code).order("-date").limit(100).list();
-                resp.getWriter().println(gson.toJson(historyDataList));
+                ofy().transact(new VoidWork() {
+                    @Override
+                    public void vrun() {
+                        List<HistoryData> historyDataList = ofy().load().type(HistoryData.class).filter("code", code).order("-date").limit(100).list();
+                        try {
+                            resp.getWriter().println(gson.toJson(historyDataList));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }});
                 break;
-        }
-
+            }
     }
 
     @Override
@@ -68,14 +90,20 @@ public class DataServlet extends HttpServlet {
                 ofy().save().entity(historyData);
 
                 ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
+                boolean needSaveActualData = false;
                 if(actualData==null){
                     actualData = new ActualData(code, date, co2, temp);
-                    ofy().save().entity(actualData);
+                    needSaveActualData = true;
                 } else if(actualData.date.isBefore(date)) {
                     actualData.date = date;
                     actualData.co2 = co2;
                     actualData.temp = temp;
+                    needSaveActualData = true;
+                }
+                if(needSaveActualData){
                     ofy().save().entity(actualData);
+                    MemcacheService syncCache = MemcacheServiceFactory.getMemcacheService();
+                    syncCache.put("ActualData_" + actualData.code, actualData);
                 }
             }
         });

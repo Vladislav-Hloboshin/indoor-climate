@@ -19,7 +19,7 @@ public class HistoryData {
     @Index
     public DateTime date;
 
-    public int co2;
+    int co2;
     public double temp;
 
     private HistoryData() {}
