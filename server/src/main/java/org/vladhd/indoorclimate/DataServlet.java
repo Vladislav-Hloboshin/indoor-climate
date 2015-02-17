@@ -1,15 +1,14 @@
 package org.vladhd.indoorclimate;
 
 import com.fatboyindustrial.gsonjodatime.Converters;
-import com.google.appengine.api.memcache.MemcacheService;
 import com.google.appengine.api.memcache.MemcacheServiceFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.googlecode.objectify.VoidWork;
 import com.googlecode.objectify.impl.translate.opt.joda.JodaTimeTranslators;
 import org.joda.time.DateTime;
-import org.vladhd.indoorclimate.domain.ActualData;
-import org.vladhd.indoorclimate.domain.HistoryData;
+import org.joda.time.DateTimeZone;
+import org.vladhd.indoorclimate.domain.ClimateData;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -25,8 +24,7 @@ public class DataServlet extends HttpServlet {
 
     public void init(){
         JodaTimeTranslators.add(factory());
-        factory().register(ActualData.class);
-        factory().register(HistoryData.class);
+        factory().register(ClimateData.class);
     }
 
     @Override
@@ -44,27 +42,16 @@ public class DataServlet extends HttpServlet {
 
         switch(finalMethod){
             case "actual":
-                MemcacheService syncCache = MemcacheServiceFactory.getMemcacheService();
-                ActualData actualData = (ActualData) syncCache.get("ActualData_" + code);
+                ClimateData actualData = (ClimateData) MemcacheServiceFactory.getMemcacheService().get("LastClimateData_" + code);
                 resp.getWriter().println(gson.toJson(actualData));
-                /*ofy().transact(new VoidWork() {
-                    @Override
-                    public void vrun() {
-                        ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
-                        try {
-                            resp.getWriter().println(gson.toJson(actualData));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }});*/
                 break;
             case "history":
                 ofy().transact(new VoidWork() {
                     @Override
                     public void vrun() {
-                        List<HistoryData> historyDataList = ofy().load().type(HistoryData.class).filter("code", code).order("-date").limit(100).list();
+                        List<ClimateData> climateDataList = ofy().load().type(ClimateData.class).filter("code", code).order("-date").limit(100).list();
                         try {
-                            resp.getWriter().println(gson.toJson(historyDataList));
+                            resp.getWriter().println(gson.toJson(climateDataList));
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -78,35 +65,13 @@ public class DataServlet extends HttpServlet {
             throws ServletException, IOException{
 
         final String code = req.getParameter("code");
-        final DateTime date = DateTime.parse(req.getParameter("date"));
         final int co2 = Integer.parseInt(req.getParameter("co2"));
         final double temp = Double.parseDouble(req.getParameter("temp"));
 
-        ofy().transact(new VoidWork() {
-            @Override
-            public void vrun() {
-                HistoryData historyData = new HistoryData(code, date, co2, temp);
+        ClimateData climateData = new ClimateData(code, DateTime.now(DateTimeZone.UTC), co2, temp);
+        ofy().save().entity(climateData);
 
-                ofy().save().entity(historyData);
-
-                ActualData actualData = ofy().load().type(ActualData.class).id(code).now();
-                boolean needSaveActualData = false;
-                if(actualData==null){
-                    actualData = new ActualData(code, date, co2, temp);
-                    needSaveActualData = true;
-                } else if(actualData.date.isBefore(date)) {
-                    actualData.date = date;
-                    actualData.co2 = co2;
-                    actualData.temp = temp;
-                    needSaveActualData = true;
-                }
-                if(needSaveActualData){
-                    ofy().save().entity(actualData);
-                    MemcacheService syncCache = MemcacheServiceFactory.getMemcacheService();
-                    syncCache.put("ActualData_" + actualData.code, actualData);
-                }
-            }
-        });
+        MemcacheServiceFactory.getMemcacheService().put("LastClimateData_" + code, climateData);
 
         resp.setContentType("text/plain");
         resp.getWriter().println("ok");

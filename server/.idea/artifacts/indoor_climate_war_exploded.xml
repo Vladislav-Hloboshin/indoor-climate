@@ -2,7 +2,6 @@
   <artifact type="exploded-war" name="indoor-climate:war exploded">
     <output-path>$PROJECT_DIR$/target/indoor-climate-1.0</output-path>
     <root id="root">
-      <element id="javaee-facet-resources" facet="indoor-climate/web/Web" />
       <element id="directory" name="WEB-INF">
         <element id="directory" name="classes">
           <element id="module-output" name="indoor-climate" />
@@ -17,6 +16,10 @@
           <element id="library" level="project" name="Maven: com.fatboyindustrial.gson-jodatime-serialisers:gson-jodatime-serialisers:1.1.0" />
         </element>
       </element>
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/target/MANIFEST.MF" />
+      </element>
+      <element id="javaee-facet-resources" facet="indoor-climate/web/Web" />
     </root>
   </artifact>
 </component>

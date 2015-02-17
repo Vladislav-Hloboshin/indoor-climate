@@ -25,7 +25,7 @@
         }
         function updateActualData(){
             $.getJSON('/data', {code: getUrlParameter('code')}, function(data) {
-                $('#date').html(data.date);
+                $('#date').html(new Date(data.date).toLocaleString());
                 $('#co2').html(data.co2+'ppm');
                 $('#temp').html(data.temp + 'C');
             });
@@ -33,7 +33,7 @@
 
         $(document).ready(function() {
             updateActualData();
-            setInterval(updateActualData, 60000);
+            setInterval(updateActualData, 30000);
         });
     </script>
   </body>

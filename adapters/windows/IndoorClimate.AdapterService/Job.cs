@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 using Quartz;
 
 namespace IndoorClimate.AdapterService
@@ -26,7 +23,6 @@ namespace IndoorClimate.AdapterService
         public void Execute(IJobExecutionContext context)
         {
             var now = DateTime.Now;
-            string date = now.ToUniversalTime().ToString("o");
             string co2 = "0";
             string temp = "0";
             if (string.IsNullOrWhiteSpace(CO2MiniDataLoggerFolder) == false)
@@ -46,7 +42,6 @@ namespace IndoorClimate.AdapterService
                 var values = new Dictionary<string, string>
                 {
                     {"code", Code},
-                    {"date", date},
                     {"co2", co2},
                     {"temp", temp}
                 };
