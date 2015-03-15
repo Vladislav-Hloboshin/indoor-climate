@@ -4,11 +4,13 @@
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <title>CO2 Checker</title>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="http://code.highcharts.com/highcharts.js"></script>
   </head>
   <body>
     <label>Дата: </label><label id="date"></label><br>
     <label>CO2: </label><label id="co2"></label><br>
     <label>Температура: </label><label id="temp"></label><br>
+    <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <script>
         function getUrlParameter(sParam)
         {
@@ -23,8 +25,9 @@
                 }
             }
         }
+
         function updateActualData(){
-            $.getJSON('/data', {code: getUrlParameter('code')}, function(data) {
+            $.getJSON('/data', {method: 'actual', code: getUrlParameter('code')}, function(data) {
                 $('#date').html(new Date(data.date).toLocaleString());
                 $('#co2').html(data.co2+'ppm');
                 $('#temp').html(data.temp + 'C');
@@ -34,6 +37,38 @@
         $(document).ready(function() {
             updateActualData();
             setInterval(updateActualData, 30000);
+
+            var chart = new Highcharts.Chart({
+                chart: {
+                    type: 'spline',
+                    renderTo: 'container'
+                },
+                title: null,
+                xAxis: {
+                    type: 'datetime'
+                },
+                yAxis: {
+                    title: {
+                        text: 'CO2 (ppm)'
+                    },
+                    min: 400,
+                    max: 1400
+                },
+                legend: {
+                    enabled: false
+                },
+                series: [{
+                    name: 'CO2'
+                }]
+            });
+            $.getJSON('/data', {method: 'history', code: getUrlParameter('code')}, function(data) {
+                var series = [];
+                for(var i=0;i<data.length;i++){
+                    var item = data[i];
+                    series.push([Date.parse(item.date),item.co2]);
+                }
+                chart.series[0].setData(series);
+            })
         });
     </script>
   </body>

@@ -4,7 +4,6 @@ import com.fatboyindustrial.gsonjodatime.Converters;
 import com.google.appengine.api.memcache.MemcacheServiceFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.googlecode.objectify.VoidWork;
 import com.googlecode.objectify.impl.translate.opt.joda.JodaTimeTranslators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -38,26 +37,24 @@ public class DataServlet extends HttpServlet {
         if(method==null || method.length()==0){
             method = "actual";
         }
-        final String finalMethod = method;
 
-        switch(finalMethod){
+        String response = "";
+        switch(method){
             case "actual":
                 ClimateData actualData = (ClimateData) MemcacheServiceFactory.getMemcacheService().get("LastClimateData_" + code);
-                resp.getWriter().println(gson.toJson(actualData));
+                response = gson.toJson(actualData);
                 break;
             case "history":
-                ofy().transact(new VoidWork() {
-                    @Override
-                    public void vrun() {
-                        List<ClimateData> climateDataList = ofy().load().type(ClimateData.class).filter("code", code).order("-date").limit(100).list();
-                        try {
-                            resp.getWriter().println(gson.toJson(climateDataList));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }});
+                List<ClimateData> climateDataList = ofy().load()
+                        .type(ClimateData.class)
+                        .filter("code", code)
+                        .order("-date")
+                        .limit(100)
+                        .list();
+                response = gson.toJson(climateDataList);
                 break;
             }
+        resp.getWriter().println(response);
     }
 
     @Override
