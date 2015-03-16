@@ -66,7 +66,7 @@ public class DataServlet extends HttpServlet {
         final double temp = Double.parseDouble(req.getParameter("temp"));
 
         ClimateData climateData = new ClimateData(code, DateTime.now(DateTimeZone.UTC), co2, temp);
-        ofy().save().entity(climateData);
+        ofy().save().entity(climateData).now();
 
         MemcacheServiceFactory.getMemcacheService().put("LastClimateData_" + code, climateData);
 
