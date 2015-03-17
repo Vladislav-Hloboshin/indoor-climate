@@ -4,7 +4,7 @@
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <title>CO2 Checker</title>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="//code.highcharts.com/highcharts.js"></script>
   </head>
   <body>
     <label>Дата: </label><label id="date"></label><br>
@@ -12,6 +12,12 @@
     <label>Температура: </label><label id="temp"></label><br>
     <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <script>
+        Highcharts.setOptions({
+            global: {
+                useUTC: false
+            }
+        });
+
         function getUrlParameter(sParam)
         {
             var sPageURL = window.location.search.substring(1);
@@ -26,18 +32,7 @@
             }
         }
 
-        function updateActualData(){
-            $.getJSON('/data', {method: 'actual', code: getUrlParameter('code')}, function(data) {
-                $('#date').html(new Date(data.date).toLocaleString());
-                $('#co2').html(data.co2+'ppm');
-                $('#temp').html(data.temp + 'C');
-            });
-        }
-
         $(document).ready(function() {
-            updateActualData();
-            setInterval(updateActualData, 30000);
-
             var chart = new Highcharts.Chart({
                 chart: {
                     type: 'spline',
@@ -61,14 +56,28 @@
                     name: 'CO2'
                 }]
             });
+
+            function updateActualData(skipAddToChart){
+                $.getJSON('/data', {method: 'actual', code: getUrlParameter('code')}, function(data) {
+                    $('#date').html(new Date(data.date).toLocaleString());
+                    $('#co2').html(data.co2+'ppm');
+                    $('#temp').html(data.temp + 'C');
+                    if(skipAddToChart) return;
+                    chart.series[0].addPoint([Date.parse(data.date),data.co2]);
+                });
+            }
+
             $.getJSON('/data', {method: 'history', code: getUrlParameter('code')}, function(data) {
                 var series = [];
-                for(var i=0;i<data.length;i++){
+                for(var i=data.length-1;i>=0;i--){
                     var item = data[i];
                     series.push([Date.parse(item.date),item.co2]);
                 }
                 chart.series[0].setData(series);
-            })
+            });
+
+            updateActualData(true);
+            setInterval(updateActualData, 30000);
         });
     </script>
   </body>
