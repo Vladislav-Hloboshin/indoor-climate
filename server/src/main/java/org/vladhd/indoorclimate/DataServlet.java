@@ -49,7 +49,7 @@ public class DataServlet extends HttpServlet {
                         .type(ClimateData.class)
                         .filter("code", code)
                         .order("-date")
-                        .limit(100)
+                        .limit(200)
                         .list();
                 response = gson.toJson(climateDataList);
                 break;
