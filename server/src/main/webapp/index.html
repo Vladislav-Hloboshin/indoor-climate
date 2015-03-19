@@ -36,24 +36,46 @@
             var chart = new Highcharts.Chart({
                 chart: {
                     type: 'spline',
-                    renderTo: 'container'
+                    renderTo: 'container',
+                    zoomType: 'xy'
                 },
                 title: null,
                 xAxis: {
                     type: 'datetime'
                 },
-                yAxis: {
-                    title: {
-                        text: 'CO2 (ppm)'
+                yAxis: [{
+                    labels: {
+                        format: '{value}ppm'
                     },
+                    title: {
+                        text: 'CO2'
+                    }/*,
                     min: 400,
-                    max: 1400
-                },
-                legend: {
+                    max: 1400*/
+                },{
+                    labels: {
+                        format: '{value}°C'
+                    },
+                    title: {
+                        text: 'Temperature'
+                    },
+                    opposite: true
+                }],
+                /*legend: {
                     enabled: false
-                },
+                },*/
                 series: [{
-                    name: 'CO2'
+                    name: 'CO2',
+                    yAxis: 0,
+                    tooltip: {
+                        valueSuffix: ' ppm'
+                    }
+                },{
+                    name: 'Temperature',
+                    yAxis: 1,
+                    tooltip: {
+                        valueSuffix: ' °C'
+                    }
                 }]
             });
 
@@ -61,19 +83,24 @@
                 $.getJSON('/data', {method: 'actual', code: getUrlParameter('code')}, function(data) {
                     $('#date').html(new Date(data.date).toLocaleString());
                     $('#co2').html(data.co2+'ppm');
-                    $('#temp').html(data.temp + 'C');
+                    $('#temp').html(data.temp + '°C');
                     if(skipAddToChart) return;
-                    chart.series[0].addPoint([Date.parse(data.date),data.co2]);
+
+                    var dt = Date.parse(data.date);
+                    chart.series[0].addPoint([dt,data.co2]);
+                    chart.series[1].addPoint([dt,data.temp]);
                 });
             }
 
             $.getJSON('/data', {method: 'history', code: getUrlParameter('code')}, function(data) {
-                var series = [];
+                var seriesCO2 = [], seriesTemp = [];
                 for(var i=data.length-1;i>=0;i--){
-                    var item = data[i];
-                    series.push([Date.parse(item.date),item.co2]);
+                    var item = data[i], dt = Date.parse(item.date);
+                    seriesCO2.push([dt,item.co2]);
+                    seriesTemp.push([dt,item.temp]);
                 }
-                chart.series[0].setData(series);
+                chart.series[0].setData(seriesCO2);
+                chart.series[1].setData(seriesTemp);
             });
 
             updateActualData(true);
