@@ -6,7 +6,7 @@
         "main.js"
     ], 
     "homepage_url": "http://kangoextensions.com/", 
-    "version": "0.9.2", 
+    "version": "0.9.3", 
     "browser_button": {
         "caption": "CO2 Checker", 
         "icon": "icons/button.png", 

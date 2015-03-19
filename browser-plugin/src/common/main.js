@@ -14,7 +14,7 @@ CO2Checker.prototype = {
 	_co2firstLevel: 800,
 	_co2seconLevel2: 900,
 	_warningTime: null,
-	_warningInterval: 1000*60*5,//5 min
+	_warningInterval: 1000*60*10,//10 min
 
     _onCommand: function() {
 		var self = this;
