@@ -14,7 +14,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
 
 import static com.googlecode.objectify.ObjectifyService.factory;
 import static com.googlecode.objectify.ObjectifyService.ofy;
@@ -38,23 +37,33 @@ public class DataServlet extends HttpServlet {
             method = "actual";
         }
 
-        String response = "";
+        Object response = null;
         switch(method){
             case "actual":
-                ClimateData actualData = (ClimateData) MemcacheServiceFactory.getMemcacheService().get("LastClimateData_" + code);
-                response = gson.toJson(actualData);
+                response = MemcacheServiceFactory.getMemcacheService().get("LastClimateData_" + code);
                 break;
-            case "history":
-                List<ClimateData> climateDataList = ofy().load()
+            case "last":
+                response = ofy().load()
                         .type(ClimateData.class)
                         .filter("code", code)
                         .order("-date")
                         .limit(250)
                         .list();
-                response = gson.toJson(climateDataList);
+                break;
+            case "history":
+                DateTime from = DateTime.parse(req.getParameter("from"));
+                DateTime to = DateTime.parse(req.getParameter("to"));
+                response = ofy().load()
+                        .type(ClimateData.class)
+                        .filter("code", code)
+                        .filter("date >", from)
+                        .filter("date <", to)
+                        .order("-date")
+                        .limit(500)
+                        .list();
                 break;
             }
-        resp.getWriter().println(response);
+        resp.getWriter().println(gson.toJson(response));
     }
 
     @Override

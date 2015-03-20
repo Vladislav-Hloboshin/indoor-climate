@@ -1,16 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <title>CO2 Checker</title>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="//code.highcharts.com/highcharts.js"></script>
     <script src="/js/global.js"></script>
-  </head>
-  <body>
-    <label>Дата: </label><label id="date"></label><br>
-    <label>CO2: </label><label id="co2"></label><br>
-    <label>Температура: </label><label id="temp"></label><br>
+</head>
+<body>
     <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <script>
         Highcharts.setOptions({
@@ -37,8 +34,8 @@
                     title: {
                         text: 'CO2'
                     }/*,
-                    min: 400,
-                    max: 1400*/
+                     min: 400,
+                     max: 1400*/
                 },{
                     labels: {
                         format: '{value}°C'
@@ -66,20 +63,14 @@
                 }]
             });
 
-            function updateActualData(skipAddToChart){
-                $.getJSON('/data', {method: 'actual', code: getUrlParameter('code')}, function(data) {
-                    $('#date').html(new Date(data.date).toLocaleString());
-                    $('#co2').html(data.co2+'ppm');
-                    $('#temp').html(data.temp + '°C');
-                    if(skipAddToChart) return;
+            var parameters = {
+                method: 'history',
+                code: getUrlParameter('code'),
+                from: getUrlParameter('from'),
+                to: getUrlParameter('to')
+            };
 
-                    var dt = Date.parse(data.date);
-                    chart.series[0].addPoint([dt,data.co2]);
-                    chart.series[1].addPoint([dt,data.temp]);
-                });
-            }
-
-            $.getJSON('/data', {method: 'last', code: getUrlParameter('code')}, function(data) {
+            $.getJSON('/data', parameters, function(data) {
                 var seriesCO2 = [], seriesTemp = [];
                 for(var i=data.length-1;i>=0;i--){
                     var item = data[i], dt = Date.parse(item.date);
@@ -89,10 +80,7 @@
                 chart.series[0].setData(seriesCO2);
                 chart.series[1].setData(seriesTemp);
             });
-
-            updateActualData(true);
-            setInterval(updateActualData, 30000);
         });
     </script>
-  </body>
+</body>
 </html>
