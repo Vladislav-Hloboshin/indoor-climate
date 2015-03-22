@@ -1,3 +1,6 @@
 browser-plugin/output/
 server/target/
 server/.idea/workspace.xml
+notifications/SkypeNotificationService/bin/
+notifications/SkypeNotificationService/obj/
+notifications/SkypeNotificationService/packages/
