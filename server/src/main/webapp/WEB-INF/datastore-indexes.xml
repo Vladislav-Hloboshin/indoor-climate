@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <datastore-indexes autoGenerate="true">
-    <datastore-index kind="ClimateData" ancestor="false" source="manual">
+    <datastore-index kind="PackedClimateData" ancestor="false" source="manual">
         <property name="code" direction="asc"/>
         <property name="date" direction="desc"/>
     </datastore-index>

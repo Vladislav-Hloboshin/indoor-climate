@@ -36,9 +36,9 @@
                     },
                     title: {
                         text: 'CO2'
-                    }/*,
+                    },
                     min: 400,
-                    max: 1400*/
+                    max: 1400
                 },{
                     labels: {
                         format: '{value}°C'
@@ -46,6 +46,8 @@
                     title: {
                         text: 'Temperature'
                     },
+                    min: 20,
+                    max: 40,
                     opposite: true
                 }],
                 tooltip: {
@@ -68,6 +70,7 @@
 
             function updateActualData(skipAddToChart){
                 $.getJSON('/data', {method: 'actual', code: getUrlParameter('code')}, function(data) {
+                    if(data===null) return;
                     $('#date').html(new Date(data.date).toLocaleString());
                     $('#co2').html(data.co2+'ppm');
                     $('#temp').html(data.temp + '°C');
@@ -79,12 +82,16 @@
                 });
             }
 
-            $.getJSON('/data', {method: 'last', code: getUrlParameter('code')}, function(data) {
+            $.getJSON('/data', {method: 'last', code: getUrlParameter('code')}, function(packedData) {
                 var seriesCO2 = [], seriesTemp = [];
-                for(var i=data.length-1;i>=0;i--){
-                    var item = data[i], dt = Date.parse(item.date);
-                    seriesCO2.push([dt,item.co2]);
-                    seriesTemp.push([dt,item.temp]);
+                for(var i=packedData.length-1;i>=0;i--){
+                    var packedItem = packedData[i];
+                    for(var j=0;j<packedItem.data.length;j++){
+                        var item = packedItem.data[j];
+                        var dt = Date.parse(item.date);
+                        seriesCO2.push([dt,item.co2]);
+                        seriesTemp.push([dt,item.temp]);
+                    }
                 }
                 chart.series[0].setData(seriesCO2);
                 chart.series[1].setData(seriesTemp);
