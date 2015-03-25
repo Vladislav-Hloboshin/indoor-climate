@@ -8,6 +8,7 @@ import com.googlecode.objectify.impl.translate.opt.joda.JodaTimeTranslators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.vladhd.indoorclimate.domain.ClimateData;
+import org.vladhd.indoorclimate.domain.PackedClimateData;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -44,22 +45,22 @@ public class DataServlet extends HttpServlet {
                 break;
             case "last":
                 response = ofy().load()
-                        .type(ClimateData.class)
+                        .type(PackedClimateData.class)
                         .filter("code", code)
                         .order("-date")
-                        .limit(250)
+                        .limit(100)
                         .list();
                 break;
             case "history":
                 DateTime from = DateTime.parse(req.getParameter("from"));
                 DateTime to = DateTime.parse(req.getParameter("to"));
                 response = ofy().load()
-                        .type(ClimateData.class)
+                        .type(PackedClimateData.class)
                         .filter("code", code)
                         .filter("date >", from)
                         .filter("date <", to)
                         .order("-date")
-                        .limit(500)
+                        .limit(300)
                         .list();
                 break;
             }
@@ -70,14 +71,30 @@ public class DataServlet extends HttpServlet {
     public void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException{
 
-        final String code = req.getParameter("code");
-        final int co2 = Integer.parseInt(req.getParameter("co2"));
-        final double temp = Double.parseDouble(req.getParameter("temp"));
+        String code = req.getParameter("code");
+        int co2 = Integer.parseInt(req.getParameter("co2"));
+        double temp = Double.parseDouble(req.getParameter("temp"));
 
-        ClimateData climateData = new ClimateData(code, DateTime.now(DateTimeZone.UTC), co2, temp);
-        ofy().save().entity(climateData).now();
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        DateTime roundedNow = now.minuteOfHour().roundFloorCopy().minusMinutes(now.getMinuteOfHour() % 5);
+
+        ClimateData climateData = new ClimateData(now, co2, temp, 0);
 
         MemcacheServiceFactory.getMemcacheService().put("LastClimateData_" + code, climateData);
+
+        PackedClimateData packedClimateData = (PackedClimateData)MemcacheServiceFactory
+                .getMemcacheService()
+                .get("LastPackedClimateData_" + code);
+
+        if(packedClimateData==null){
+            packedClimateData = new PackedClimateData(code, roundedNow);
+        } else if(packedClimateData.date == null){
+            ofy().save().entity(packedClimateData).now();
+            packedClimateData = new PackedClimateData(code, roundedNow);
+        }
+        packedClimateData.data.add(climateData);
+
+        MemcacheServiceFactory.getMemcacheService().put("LastPackedClimateData_" + code, packedClimateData);
 
         resp.setContentType("text/plain");
         resp.getWriter().println("ok");
