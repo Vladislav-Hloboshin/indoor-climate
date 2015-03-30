@@ -86,13 +86,24 @@ public class DataServlet extends HttpServlet {
         MemcacheService memcacheService = MemcacheServiceFactory.getMemcacheService();
 
         String code = req.getParameter("code");
-        int co2 = Integer.parseInt(req.getParameter("co2"));
-        double temp = Double.parseDouble(req.getParameter("temp"));
+        int co2 = 0;
+        double temp = 0;
+        int humidity = 0;
+
+        try {
+            co2 = Integer.parseInt(req.getParameter("co2"));
+        }catch(NumberFormatException e){}
+        try {
+            temp = Double.parseDouble(req.getParameter("temp"));
+        }catch(NumberFormatException e){}
+        try{
+            humidity = Integer.parseInt(req.getParameter("humidity"));
+        }catch(NumberFormatException e){}
 
         DateTime now = DateTime.now(DateTimeZone.UTC);
         DateTime roundedNow = now.minuteOfHour().roundFloorCopy().minusMinutes(now.getMinuteOfHour() % saveDeltaInMinutes);
 
-        ClimateData climateData = new ClimateData(now, co2, temp, 0);
+        ClimateData climateData = new ClimateData(now, co2, temp, humidity);
 
         memcacheService.put("LastClimateData_" + code, climateData);
 

@@ -9,8 +9,9 @@
   </head>
   <body>
     <label>Дата: </label><label id="date"></label><br>
-    <label>CO2: </label><label id="co2"></label><br>
     <label>Температура: </label><label id="temp"></label><br>
+    <label>CO2: </label><label id="co2"></label><br>
+    <label>Влажность: <label id="humidity"></label></label>
     <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     <script>
         Highcharts.setOptions({
@@ -32,6 +33,16 @@
                 },
                 yAxis: [{
                     labels: {
+                        format: '{value}°C'
+                    },
+                    title: {
+                        text: 'Temperature'
+                    },
+                    min: 20,
+                    max: 40,
+                    opposite: true
+                },{
+                    labels: {
                         format: '{value}ppm'
                     },
                     title: {
@@ -50,29 +61,43 @@
                     }]
                 },{
                     labels: {
-                        format: '{value}°C'
+                        format: '{value}%'
                     },
                     title: {
-                        text: 'Temperature'
+                        text: 'Humidity'
                     },
                     min: 20,
-                    max: 40,
+                    max: 60,
                     opposite: true
                 }],
                 tooltip: {
-                    shared: true
+                    shared: true,
+                    crosshairs: true
+                },
+                plotOptions: {
+                    spline: {
+                        marker: {
+                            enabled: false
+                        }
+                    }
                 },
                 series: [{
-                    name: 'CO2',
+                    name: 'Temperature',
                     yAxis: 0,
+                    tooltip: {
+                        valueSuffix: ' °C'
+                    }
+                },{
+                    name: 'CO2',
+                    yAxis: 1,
                     tooltip: {
                         valueSuffix: ' ppm'
                     }
                 },{
-                    name: 'Temperature',
-                    yAxis: 1,
+                    name: 'Humidity',
+                    yAxis: 2,
                     tooltip: {
-                        valueSuffix: ' °C'
+                        valueSuffix: ' %'
                     }
                 }]
             });
@@ -81,29 +106,33 @@
                 $.getJSON('/data', {method: 'actual', code: getUrlParameter('code')}, function(data) {
                     if(data===null) return;
                     $('#date').html(new Date(data.date).toLocaleString());
-                    $('#co2').html(data.co2+'ppm');
                     $('#temp').html(data.temp + '°C');
+                    $('#co2').html(data.co2+'ppm');
+                    $('#humidity').html(data.humidity + '%');
                     if(skipAddToChart) return;
 
                     var dt = Date.parse(data.date);
-                    chart.series[0].addPoint([dt,data.co2]);
-                    chart.series[1].addPoint([dt,data.temp]);
+                    chart.series[0].addPoint([dt,data.temp]);
+                    chart.series[1].addPoint([dt,data.co2]);
+                    chart.series[2].addPoint([dt,data.humidity]);
                 });
             }
 
             $.getJSON('/data', {method: 'last', code: getUrlParameter('code')}, function(packedData) {
-                var seriesCO2 = [], seriesTemp = [];
+                var seriesCO2 = [], seriesTemp = [], seriesHumidity = [];
                 for(var i=packedData.length-1;i>=0;i--){
                     var packedItem = packedData[i];
                     for(var j=0;j<packedItem.data.length;j++){
                         var item = packedItem.data[j];
                         var dt = Date.parse(item.date);
-                        seriesCO2.push([dt,item.co2]);
                         seriesTemp.push([dt,item.temp]);
+                        seriesCO2.push([dt,item.co2]);
+                        seriesHumidity.push([dt,item.humidity]);
                     }
                 }
-                chart.series[0].setData(seriesCO2);
-                chart.series[1].setData(seriesTemp);
+                chart.series[0].setData(seriesTemp);
+                chart.series[1].setData(seriesCO2);
+                chart.series[2].setData(seriesHumidity);
             });
 
             updateActualData(true);
