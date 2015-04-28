@@ -5,6 +5,7 @@ import com.google.appengine.api.memcache.MemcacheService;
 import com.google.appengine.api.memcache.MemcacheServiceFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.impl.translate.opt.joda.JodaTimeTranslators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.googlecode.objectify.ObjectifyService.factory;
@@ -23,7 +25,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 public class DataServlet extends HttpServlet {
 
-    private static int saveDeltaInMinutes = 5;
+    private static int saveDeltaInMinutes = 1;
 
     public void init(){
         JodaTimeTranslators.add(factory());
@@ -51,17 +53,22 @@ public class DataServlet extends HttpServlet {
                 response = memcacheService.get("LastClimateData_" + code);
                 break;
             case "last":
-                List<PackedClimateData> dataList = ofy().load()
+                List<Key<PackedClimateData>> keys = ofy().load()
                         .type(PackedClimateData.class)
                         .filter("code", code)
                         .order("-date")
-                        .limit(288)//one day (saveDeltaInMinutes = 5)
+                        .limit(144)//12 hours (saveDeltaInMinutes = 5)
+                        .keys()
                         .list();
-                PackedClimateData packedClimateData = (PackedClimateData)memcacheService.get("LastPackedClimateData_" + code);
+                List<Long> ids = new ArrayList<>();
+                for(Key<PackedClimateData> key: keys){
+                    ids.add(key.getId());
+                }
+                /*PackedClimateData packedClimateData = (PackedClimateData)memcacheService.get("LastPackedClimateData_" + code);
                 if(packedClimateData!=null){
                     dataList.add(0, packedClimateData);
-                }
-                response = dataList;
+                }*/
+                response = ids;
                 break;
             case "history":
                 DateTime from = DateTime.parse(req.getParameter("from"));
@@ -74,6 +81,12 @@ public class DataServlet extends HttpServlet {
                         .order("-date")
                         .limit(576)//two days (saveDeltaInMinutes = 5)
                         .list();
+                break;
+            case "data":
+                String[] idsValues = req.getParameterValues("id");
+                response = ofy().load()
+                        .type(PackedClimateData.class)
+                        .
                 break;
             }
         resp.getWriter().println(gson.toJson(response));
