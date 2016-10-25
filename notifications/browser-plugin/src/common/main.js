@@ -1,46 +1,88 @@
-﻿function CO2Checker() {
+var storage = window.localStorage;
+
+function CO2Checker() {
     var self = this;
-    kango.ui.browserButton.addEventListener(kango.ui.browserButton.event.COMMAND, function() {
-        self._onCommand();
+    if(storage.code){
+        self.code = storage.code;
+    }
+    if(storage.active==='true'){
+        self.start();
+    } else {
+        kango.ui.browserButton.setBadgeValue("off");
+    }
+    window.addEventListener('storage', function(e) {
+        switch(e.key){
+            case 'active':
+                if(e.newValue==='true') self.start();
+                else self.stop();
+                break;
+            case 'code':
+                self.code = e.newValue;
+                self.refresh();
+                break;
+            case 'alwaysShowCO2Level':
+                self.refresh();
+                break;
+        }
     });
-	self.refresh();
-	window.setInterval(function(){self.refresh()}, self._refreshTimeout);
+    kango.ui.browserButton.addEventListener(
+        kango.ui.browserButton.event.COMMAND,
+        function(){
+            if(self.code) kango.browser.tabs.create({url: self.siteUrl + '/?code=' + self.code});
+        }
+    );
 }
 
 CO2Checker.prototype = {
-	_refreshTimeout: 1000*60,//1 min
-	_code: '954e31d7-6746-440e-b4ad-47ef8d5443c0',
-	_siteUrl: 'http://indoor-climate.appspot.com',
-	_co2firstLevel: 800,
-	_co2seconLevel2: 900,
-	_warningTime: null,
-	_warningInterval: 1000*60*10,//10 min
-
-    _onCommand: function() {
-		var self = this;
-        kango.browser.tabs.create({url: self._siteUrl + '/?code=' + self._code});
+    active: false,
+    refreshTimeout: 60*1000,//1 min
+    code: '',
+    siteUrl: 'http://indoor-climate.appspot.com',
+    co2WarningLevel: 800,
+    co2NotificationLevel: 1000,
+    lastWarningTime: null,
+    warningInterval: 10*60*1000,//10 min
+    intervalId: null,
+    
+    refresh: function() {
+        var self = this,
+            details = {
+                url: this.siteUrl + '/data?code=' + this.code,
+                method: 'GET',
+                async: true,
+                contentType: 'json'
+            };
+        if(!self.active || self.code==='') return;
+        kango.xhr.send(details, function(data) {
+            if(!self.active || self.code==='') return;
+            if(data.status == 200) {
+                var co2 = data.response.co2;
+                kango.ui.browserButton.setBadgeValue(storage.alwaysShowCO2Level==='true' || co2 > self.co2WarningLevel ? co2 : null);
+                var now = new Date();
+                if(co2 > self.co2NotificationLevel && (self.lastWarningTime===null || (now.getTime()-self.lastWarningTime.getTime())>self.warningInterval)){
+                    kango.ui.notifications.show('Предупреждение', 'Текущий уровень CO2 равен '+co2+'ppm. Это превышает рекомендуемый уровень равный 800ppm', 'icons/icon100.png');
+                    self.lastWarningTime = now;
+                }
+            }
+        });
     },
-	
-	refresh: function() {
-		var self = this;
-		var details = {
-			url: self._siteUrl + '/data?code=' + self._code,
-			method: 'GET',
-			async: true,
-			contentType: 'json'
-		};
-		kango.xhr.send(details, function(data) {
-			if(data.status == 200) {
-				var co2 = data.response.co2;
-				kango.ui.browserButton.setBadgeValue(co2 > self._co2firstLevel ? co2 : null);
-				var now = new Date();
-				if(co2 > self._co2seconLevel2 && (self._warningTime===null || (now.getTime()-self._warningTime.getTime())>self._warningInterval)){
-					kango.ui.notifications.show('Предупреждение', 'Текущий уровень CO2 равен '+co2+'ppm. Это превышает рекомендуемый уровень равный 800ppm', 'icons/icon100.png');
-					self._warningTime = now;
-				}
-			}
-		});
-	}
+    
+    start: function(){
+        var self = this;
+        if(self.active) return;
+        self.active = true;
+        kango.ui.browserButton.setBadgeValue(null);
+        this.refresh();
+        this.intervalId = window.setInterval(function(){self.refresh()}, this.refreshTimeout);
+    },
+    
+    stop: function(){
+        var self = this;
+        if(!self.active) return;
+        self.active = false;
+        window.clearInterval(self.intervalId);
+        kango.ui.browserButton.setBadgeValue("off");
+    }
 };
 
 var extension = new CO2Checker();
